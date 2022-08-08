@@ -3,6 +3,7 @@
 #include <sys/timerfd.h>
 #include <unistd.h>
 
+#include "../src/Timestamp.h"
 #include "../src/channel.h"
 #include "../src/eventloop.h"
 
@@ -11,7 +12,7 @@ using namespace mytinywebserver;
 
 EventLoop* g_loop;
 
-void timeout() {
+void timeout(Timestamp receiveTime) {
     printf("Timeout");
     g_loop->quit();
 }
@@ -22,7 +23,7 @@ int main() {
 
     int timefd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     Channel* channel = new Channel(&loop, timefd);
-    channel->setReadCallBack_(timeout);
+    channel->setReadCallBack_(std::bind(timeout, Timestamp::now()));
     channel->enableReading();
 
     struct itimerspec howlong;

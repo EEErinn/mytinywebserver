@@ -9,7 +9,6 @@
 #include "Timestamp.h"
 #include "noncopyable.h"
 
-
 namespace mytinywebserver {
 
 class EventLoop;
@@ -30,7 +29,10 @@ class Channel : noncopyable {
     void disableWriting();  // 从poller移除写事件
     void disableAll();      // 从poller移除所有事件
 
-    using ReadCallBack_ = std::function<void()>;
+    bool isWritable() const { return m_events & m_WriteEvent; }
+    bool isReadable() const { return m_events & m_ReadEvent; }
+
+    using ReadCallBack_ = std::function<void(Timestamp)>;
     using EventCallBack_ = std::function<void()>;
 
     // 事件处理函数:核心函数，根据m_revents的值分别调用不同用户回调。

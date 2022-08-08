@@ -3,11 +3,13 @@
 
 #include <assert.h>
 #include <sys/eventfd.h>
+
 #include <iostream>
 
-#include "channel.h"
 #include "CurrentThread.h"
+#include "channel.h"
 #include "poller.h"
+#include "socketops.h"
 
 namespace mytinywebserver {
 
@@ -37,12 +39,15 @@ EventLoop::EventLoop()
     } else {
         t_loopInThisThread = this;
     }
-    m_wakeupChannel->setReadCallBack_(std::bind(&EventLoop::handleRead, this));
+    m_wakeupChannel->setReadCallBack_(
+        std::bind(&EventLoop::handleRead, this, std::placeholders::_1));
     m_wakeupChannel->enableReading();
 }
 
 EventLoop::~EventLoop() {
     assert(!m_looping);
+    m_wakeupChannel->removeSelf();
+    socket::closeFd(m_wakeupfd);
     t_loopInThisThread = nullptr;
 }
 
@@ -54,10 +59,9 @@ void EventLoop::assertInThread() {
     if (!isInloopThread()) {
         // FIXME : log
         std::cout << "EventLoop::abortNotInLoopThread - EventLoop " << this
-                    << " was created in threadId_ = " << m_threadId
-                    << ", current thread id = " <<  CurrentThread::tid();
+                  << " was created in threadId_ = " << m_threadId
+                  << ", current thread id = " << CurrentThread::tid();
         std::cout.flush();
-        
     }
 }
 
@@ -116,9 +120,9 @@ void EventLoop::queueInLoop(Functor cb) {
     }
     /**
      * || callingPendingFunctors的意思是 当前loop正在执行回调中
-     *但是loop的pendingFunctors_中又加入了新的回调 需要通过wakeup写事件
+     * 但是loop的pendingFunctors_中又加入了新的回调 需要通过wakeup写事件
      * 唤醒相应的需要执行上面回调操作的loop的线程
-     *让loop()下一次poller_->poll()不再阻塞（阻塞的话会延迟前一次新加入的回调的执行），然后
+     * 让loop()下一次poller_->poll()不再阻塞（阻塞的话会延迟前一次新加入的回调的执行），然后
      * 继续执行pendingFunctors_中的回调函数
      **/
     if (!isInloopThread() || m_callingPendingFunctors) {
@@ -128,14 +132,6 @@ void EventLoop::queueInLoop(Functor cb) {
 
 void EventLoop::doPendingFunctors() {
     assertInThread();
-    // {
-    //     std::unique_lock<std::mutex> lock(m_mutex);
-    //     m_callingPendingFunctors = true;
-    //     for (auto f : m_pendingFunctors) {
-    //         f();
-    //     }
-    //     m_callingPendingFunctors = false;
-    // }
     m_callingPendingFunctors = true;
     std::vector<Functor> functors;
     {
@@ -171,7 +167,7 @@ void EventLoop::wakeup() {
         // n);
     }
 }
-void EventLoop::handleRead() {
+void EventLoop::handleRead(Timestamp receiveTime) {
     uint64_t one = 1;
     auto n = read(m_wakeupfd, &one, sizeof(one));
     if (n != sizeof(one)) {

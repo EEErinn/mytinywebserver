@@ -13,6 +13,13 @@ set(LIB_SRC
     src/CurrentThread.cpp
     src/Timestamp.cpp
     src/defaultPoller.cpp
+    src/Acceptor.cpp
+    src/socket.cpp
+    src/socketops.cpp
+    src/InetAddress.cpp
+    src/Tcpserver.cpp
+    src/TcpConnection.cpp
+    src/Buffer.cpp
 )
 
 add_library(mytinywebserver SHARED ${LIB_SRC})
@@ -25,9 +32,12 @@ add_dependencies(testEvent mytinywebserver)
 target_link_libraries(testEvent mytinywebserver)
 target_link_libraries(testEvent pthread)
 
-# add_executable(test_config tests/testConfig.cpp)
-# add_dependencies(test_config mysylar)
-# target_link_libraries(test_config mysylar)
+add_executable(testAcceptor tests/testAcceptor.cpp)
+add_dependencies(testAcceptor mytinywebserver)
+target_link_libraries(testAcceptor mytinywebserver)
+
+# add_executable(testSharedPtr tests/testSharedPtr.cpp)
+
 
 # add_executable(test_yml tests/test_yml.cpp)
 # target_link_libraries(test_yml yaml-cpp)

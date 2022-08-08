@@ -19,6 +19,8 @@ Channel::Channel(EventLoop* loop, int fd)
       m_index(Channel::State::sNew),
       m_tied(false) {}
 
+// channel析构前要确保channel执行了removeself。
+// 一般在拥有channel的对象的析构会调用removeself,如accpetor、eventloop
 Channel::~Channel() {
     // if (m_loop->hasChannel(this)) removeSelf();
     // assert(!m_loop->hasChannel(this));
@@ -64,10 +66,10 @@ void Channel::tie(const std::shared_ptr<void>& v) {
 // EPOLLHUP：挂起。管道的写端被关闭后，读端描述符上收到EPOLLHUP信号
 // EPOLLRDHUP：tcp连接被对方关闭，或者对方关闭了写操作
 void Channel::handleEventWithGuard(Timestamp receiveTime) {
-    if ((m_revents & EPOLLHUP) && !(m_revents & EPOLLHUP)) {
+    if ((m_revents & EPOLLHUP) && !(m_revents & EPOLLIN)) {
         if (m_closeCallBack_) m_closeCallBack_();
     } else if (m_revents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
-        if (m_readCallBack_) m_readCallBack_();
+        if (m_readCallBack_) m_readCallBack_(receiveTime);
     } else if (m_revents & EPOLLOUT) {
         if (m_writeCallBack_) m_writeCallBack_();
     } else if (m_revents & EPOLLERR) {

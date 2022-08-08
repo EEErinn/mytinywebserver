@@ -2,18 +2,27 @@
 #pragma once
 
 #include <pthread.h>
+#include <signal.h>
 #include <unistd.h>
-#include <functional>
+
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <vector>
 
-
+#include "Timestamp.h"
 #include "noncopyable.h"
 
+namespace {
 
+class IgnoreSigPipe {
+   public:
+    IgnoreSigPipe() { ::signal(SIGPIPE, SIG_IGN); }
+};
+IgnoreSigPipe initObj;
+}  // namespace
 namespace mytinywebserver {
 
 class Channel;
@@ -46,9 +55,10 @@ class EventLoop : noncopyable {
 
     void wakeup();  // 用来唤醒loop所在线程
                     // 往wakeupfd中写入数据，loop的epoll_wait返回
-    void handleRead();  // 往channel中注册在wakeup上发生读事件时的回调函数
+    // 往channel中注册在wakeup上发生读事件时的回调函数
+    void handleRead(Timestamp receiveTime);
 
-    int getThreadId(){ return m_threadId;}
+    int getThreadId() { return m_threadId; }
 
    private:
     // 返回Poller监测到有事件发生的channel列表，用于缓存

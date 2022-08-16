@@ -25,6 +25,7 @@ class Socket {
     // set socket option info
     void setTcpNoDelay(bool on);
     void setKeepAlive(bool on);
+    void setReUse(bool on);
 
    private:
     const int m_sockfd;

@@ -8,6 +8,7 @@
 
 #include "CurrentThread.h"
 #include "channel.h"
+#include "log/LogUtils.h"
 #include "poller.h"
 #include "socketops.h"
 
@@ -16,7 +17,7 @@ namespace mytinywebserver {
 int createEventFd() {
     int fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (fd < 0) {
-        // log
+        LOG_ERROR << "Failed in eventfd";
     }
     return fd;
 }
@@ -32,10 +33,10 @@ EventLoop::EventLoop()
       m_callingPendingFunctors(false),
       m_wakeupfd(createEventFd()),
       m_wakeupChannel(new Channel(this, m_wakeupfd)) {
+    LOG_DEBUG << "EventLoop created " << this << " in thread " << m_threadId;
     if (t_loopInThisThread) {
-        // FIXME: LOG
-        // LOG_FATAL << "Another Eventloop " << t_loopInThisThread
-        //           << "exists in this thread " << m_threadId;
+        LOG_FATAL << "Another Eventloop " << t_loopInThisThread
+                  << "exists in this thread " << m_threadId;
     } else {
         t_loopInThisThread = this;
     }
@@ -46,6 +47,9 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop() {
     assert(!m_looping);
+    LOG_DEBUG << "EventLoop " << this << " of thread " << m_threadId
+              << " destructs in thread " << CurrentThread::tid();
+    m_wakeupChannel->disableAll();
     m_wakeupChannel->removeSelf();
     socket::closeFd(m_wakeupfd);
     t_loopInThisThread = nullptr;
@@ -57,20 +61,18 @@ bool EventLoop::isInloopThread() const {
 
 void EventLoop::assertInThread() {
     if (!isInloopThread()) {
-        // FIXME : log
-        std::cout << "EventLoop::abortNotInLoopThread - EventLoop " << this
+        LOG_DEBUG << "EventLoop::abortNotInLoopThread - EventLoop " << this
                   << " was created in threadId_ = " << m_threadId
                   << ", current thread id = " << CurrentThread::tid();
-        std::cout.flush();
     }
 }
 
 void EventLoop::loop() {
     assert(!m_looping);
     assertInThread();
-
     m_looping = true;
     m_quit = false;
+    LOG_DEBUG << "EventLoop " << this << " start looping";
     while (!m_quit) {
         m_activeChannels.clear();
         m_poller->poll(0, &m_activeChannels);
@@ -78,8 +80,9 @@ void EventLoop::loop() {
         for (auto* channel : m_activeChannels) {
             channel->handleEvent(Timestamp::now());
         }
+        doPendingFunctors();  //处理其他任务，执行外部线程注入的函数对象
     }
-    // LOG_TRACE << "Eventloop " << this << " stop looping";
+    LOG_DEBUG << "Eventloop " << this << " stop looping";
     m_looping = false;
 }
 
@@ -95,13 +98,13 @@ void EventLoop::loop() {
  *
  *    ！！！ 注意： 正常情况下 mainloop负责请求连接 将回调写入subloop中
  *    通过生产者消费者模型即可实现线程安全的队列 ！！！
- *但是muduo通过wakeup()机制 使用eventfd创建的wakeupFd_ notify
- *使得mainloop和subloop之间能够进行通信
+ *    但是muduo通过wakeup()机制 使用eventfd创建的wakeupFd_ notify
+ *    使得mainloop和subloop之间能够进行通信
  **/
 void EventLoop::quit() {
     m_quit = true;
     if (!isInloopThread()) {
-        // wakeup();
+        wakeup();
     }
 }
 
@@ -162,17 +165,18 @@ bool EventLoop::hasChannel(Channel* channel) {
 void EventLoop::wakeup() {
     uint64_t one = 1;
     auto n = write(m_wakeupfd, &one, sizeof(one));
+    LOG_DEBUG << "EventLoop::wakeup()";
     if (n != sizeof(one)) {
-        // LOG_ERROR("Eventloop::wakeup() writes %lu bytes instead of 8\n",
-        // n);
+        LOG_ERROR << "EventLoop::wakeup() writes " << n
+                  << " bytes instead of 8";
     }
 }
 void EventLoop::handleRead(Timestamp receiveTime) {
     uint64_t one = 1;
     auto n = read(m_wakeupfd, &one, sizeof(one));
     if (n != sizeof(one)) {
-        // LOG_ERROR("Eventloop::handleRead reads %lu bytes instead of 8\n",
-        // n);
+        LOG_ERROR << "EventLoop::handleRead() reads " << n
+                  << " bytes instead of 8";
     }
 }
 

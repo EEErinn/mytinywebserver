@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <errno.h>
 
 namespace mytinywebserver {
 namespace socket {
@@ -27,6 +28,17 @@ int createSocketFd() {
 void closeFd(int fd){
     if (::close(fd) < 0) {
         // LOG_SYSERR << "sockets::close";
+    }
+}
+
+int getSocketError(int sockfd) {
+    int optval;
+    socklen_t optlen = static_cast<socklen_t>(sizeof optval);
+
+    if (::getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
+        return errno;
+    } else {
+        return optval;
     }
 }
 

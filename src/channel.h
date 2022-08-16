@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "Timestamp.h"
@@ -69,6 +70,10 @@ class Channel : noncopyable {
     int getREvents() const { return m_revents; }
     State getIndex() const { return m_index; }
     bool isNoneEvent() { return m_events == m_NoneEvent; }
+
+    std::string reventsToString() const;
+    std::string eventsToString() const;
+    std::string eventsToString(const int fd, const int ev) const;
 
     // setter
     void setLoop(EventLoop* val) { m_loop = val; }

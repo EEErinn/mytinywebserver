@@ -6,6 +6,7 @@ namespace socket {
 
 int createSocketFd();
 void closeFd(int fd);
+int getSocketError(int sockfd);
 
 }  // namespace socket
 }  // namespace mytinywebserver

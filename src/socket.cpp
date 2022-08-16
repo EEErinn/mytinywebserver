@@ -49,7 +49,7 @@ void Socket::connect(const InetAddress& addr) {
 }
 
 void Socket::shutdownWrite() {
-    if (-1 == shutdown(m_sockfd, SHUT_RD)) {
+    if (-1 == shutdown(m_sockfd, SHUT_WR)) {
         // LOG_SYSERR <<
     }
 }
@@ -63,4 +63,10 @@ void Socket::setKeepAlive(bool on) {
     int optval = on ? 1 : 0;
     ::setsockopt(m_sockfd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
 }
+
+void Socket::setReUse(bool on) {
+    int optval = on ? 1 : 0;
+    ::setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+}
+
 }  // namespace mytinywebserver

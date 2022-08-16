@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/any.hpp>
 #include <memory>
 #include <string>
 
@@ -11,7 +12,6 @@
 #include "socket.h"
 
 namespace mytinywebserver {
-
 /**
  * @brief TcpConnection生命周期不稳定
  * 客户端断开某个tcpsocket，对应的服务端进程中的Tcpconnection对象也即将销毁，
@@ -21,6 +21,10 @@ namespace mytinywebserver {
  * tcpserver调用newConnection时需要使用shared_ptr创建TcpConnection 和线程安全
  */
 class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
+   private:
+    enum StateE { kconnecting, kConnected, kDisconnected, kDisconnecting };
+    void setState(StateE v) { m_state = v; }
+
    public:
     TcpConnection(EventLoop* loop, int fd, const std::string& name);
     ~TcpConnection();
@@ -30,33 +34,39 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     // 用于tcpserver将其从map中移除后，通知用户连接已断开，是析构前的最后一个成员函数。
     void connectDestoryed();
 
-    std::string getName() const { return m_name; }
-    EventLoop* getLoop() const { return m_loop; }
-
-    void setCloseCallBack(CloseCallBack_ v) { m_closeCallBack = v; }
-    void setConnectionCallBack(ConnectionCallBack_ v) {
-        m_connectionCallBack = v;
-    }
-    void setMessageCallBack(MessageCallBack_ v) { m_messageCallBack = v; }
-
     // 发送数据, 可跨线程
     void send(const void* message, size_t len);
     void send(const std::string& message);
+    void send(Buffer* buffer);
+    void sendInloop(const std::string& message);
     void sendInloop(const void* message, size_t len);
 
     // 主动关闭连接， 可跨线程
     void shutdown();
     void shutdownInloop();
 
-    // 設置socket option
+    // 设置socket option
     void setTcpNoDelay(bool on);
     void setKeepAlive(bool on);
 
+    // getter
+    const std::string& getName() const { return m_name; }
+    EventLoop* getLoop() const { return m_loop; }
+    const boost::any& getContext() const { return m_context; }
+    boost::any* getMutableContext() { return &m_context; }
+    bool connected() const { return m_state == kConnected; }
+
+    // setter
+    void setCloseCallBack(const CloseCallBack_& v) { m_closeCallBack = v; }
+    void setConnectionCallBack(const ConnectionCallBack_& v) {
+        m_connectionCallBack = v;
+    }
+    void setMessageCallBack(const MessageCallBack_& v) {
+        m_messageCallBack = v;
+    }
+    void setContext(const boost::any& v) { m_context = v; }
+
    private:
-    enum StateE { kconnecting, kConnected, kDisconnected, kDisconnecting };
-
-    void setState(StateE v) { m_state = v; }
-
     // 事件处理函数
     void handleRead(Timestamp);
     void handleWrite();
@@ -79,6 +89,8 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     // 本端和对端的地址
     // const InetAddress m_localAddr;
     // const InetAddress m_peerAddr;
+    // 上层用户请求上下文。一般在连接建立时 调用的connectionCallback_中设置
+    boost::any m_context;
 };
 
 }  // namespace mytinywebserver

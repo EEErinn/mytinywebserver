@@ -41,9 +41,12 @@ Note: * 为必须完成的功能
 1. 完成事件处理，eventloop - poller - channel 3日
 2. 完成事件注册 即Acceptor、socket、InetAddress 1日
 3. 完成tcp连接 即tcpserver、tcpconnection、buffer 6日
+4. 多线程 即thread、eventthread、eventthreadpool
+5. 支持http1.1 url 即httpserver、httpcontext、httprequest、httpresponse
+6. 同步日志
 
 Todos:
-4. 多线程 即thread、eventthread、eventthreadpool
+
 
 
 
@@ -117,3 +120,16 @@ reciveSize小于BUF_LEN的时候，我是可以跳出read的循环了还是必�
 
 Q: 設置tcp socket option
 https://blog.csdn.net/qq_38093301/article/details/105847660
+
+### 日志
+
+
+### 连调出现的bug
+1. 当在浏览器请求http://127.0.0.1:8080/hello等，服务器程序发送完reponse给服务器后，在处理下一个读事件，handleRead时段错误
+答: 首先，找到core dump文件。参考:[https://www.pudn.com/news/6292ee86e74b9677e8e0a8c8.html].注意，在生成core dump文件时，即使设置了ulimit -c unlimited，也先查一下ulimit -c 看是否为 unlimited.
+    调试core dump， 命令为 gdb ../bin/testHttpServer /var/core/core-testHttpServer-11871-18446744073709551615
+    bt查看堆栈信息，不断cotinue
+    定位是TcpConnection::handleRead，Buffer::readFd,append, insert出错。
+    分析，因为insert会扩容，但writeIndex等
+
+2. 什么时候产生POLLHUP

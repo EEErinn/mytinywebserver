@@ -5,24 +5,28 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "log/LogUtils.h"
+
 namespace mytinywebserver {
 
 EpollPoller::EpollPoller()
     : m_epollfd(::epoll_create1(EPOLL_CLOEXEC)),
       m_eventList(m_initEventListSize) {
     if (m_epollfd < 0) {
-        // FIXME: log
+        LOG_FATAL << "EPollPoller::EPollPoller";
     }
 }
 
 EpollPoller::~EpollPoller() { ::close(m_epollfd); }
 
 void EpollPoller::poll(int fd, ChannelList* activeChannels) {
+    LOG_DEBUG << "fd total count " << m_channelMap.size();
     int ret =
         ::epoll_wait(m_epollfd, &*m_eventList.begin(), m_eventList.size(), -1);
     if (ret < 0) {
-        // FIXME: log
+        LOG_DEBUG << "nothing happened";
     }
+    LOG_DEBUG << ret << " events happened";
     for (int i = 0; i < ret; ++i) {
         Channel* curChannel =
             reinterpret_cast<Channel*>(m_eventList[i].data.ptr);
@@ -44,14 +48,19 @@ void EpollPoller::update(int op, Channel* channel) {
     ::memset(&event, 0, sizeof(epoll_event));
     event.data.ptr = channel;
     event.events = channel->getEvents();
+    LOG_DEBUG << "epoll_ctl op = " << op << " fd = " << channel->getFd()
+              << " event = { " << channel->eventsToString() << " }";
     if (::epoll_ctl(m_epollfd, op, channel->getFd(), &event) < 0) {
-        // FIXME: log
+        LOG_ERROR << "update error";
     }
 }
 
 void EpollPoller::updateChannel(Channel* channel) {
     Channel::State index = channel->getIndex();
     int curFd = channel->getFd();
+    LOG_DEBUG << "fd = " << channel->getFd()
+              << " events = " << channel->getEvents();
+    //   << " index = " << index;
     if (index == Channel::State::sNew) {
         assert(m_channelMap.find(curFd) == m_channelMap.end());
         m_channelMap[curFd] = channel;

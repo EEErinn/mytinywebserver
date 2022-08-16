@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+#include "log/LogUtils.h"
+
 namespace mytinywebserver {
 
 Timestamp::Timestamp() : m_ms(0) {}
@@ -11,14 +13,14 @@ Timestamp::Timestamp(int64_t ms) : m_ms(ms) {}
 
 Timestamp Timestamp::now() { return Timestamp(time(NULL)); }
 
+// FIXME: 用gettimeofday优化 https://github.com/LeechanX/Ring-Log
 std::string Timestamp::toString() const {
-    char buf[20] = {'\0'};
-    struct tm* time = nullptr;
-    localtime_r(&m_ms, time);
-    snprintf(buf, sizeof(buf), "%d %d %d %d %d %d",
-             time->tm_year + 1900, time->tm_mon + 1, time->tm_mday + 1,
-             time->tm_hour + 1, time->tm_min + 1, time->tm_sec + 1);
+    char buf[100] = {'\0'};
+    struct tm* t = localtime(&m_ms);
+    snprintf(buf, sizeof(buf), "%d %d %d %d %d %d", t->tm_year + 1900,
+             t->tm_mon + 1, t->tm_mday + 1, t->tm_hour + 1,
+             t->tm_min + 1, t->tm_sec + 1);
     return buf;
 }
 
-}  // namespace mytinywebser
+}  // namespace mytinywebserver

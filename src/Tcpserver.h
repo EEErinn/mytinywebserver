@@ -7,6 +7,7 @@
 #include "Acceptor.h"
 #include "CallBacks.h"
 #include "TcpConnection.h"
+#include "eventloopthreadpool.h"
 
 namespace mytinywebserver {
 
@@ -18,7 +19,7 @@ namespace mytinywebserver {
  */
 class TcpServer {
    public:
-    TcpServer(EventLoop* loop, const InetAddress& addr,
+    TcpServer(EventLoop* loop, const InetAddress& addr, int threadNum,
               const std::string& name);
     ~TcpServer();
 
@@ -31,6 +32,9 @@ class TcpServer {
         m_connectionCallBack = v;
     }
 
+    const std::string& getName() const { return m_name; }
+    const std::string& getIpPort() const { return m_ipPort; }
+
    private:
     void newConnection(int fd);  // 建立新连接
 
@@ -38,13 +42,15 @@ class TcpServer {
     void removeConnection(const TcpConnectionPtr&);
     void removeConnectionInLoop(const TcpConnectionPtr&);
 
-    EventLoop* m_loop;          // 用户定义的loop，主线程的mainloop
+    EventLoop* m_loop;  // 用户定义的loop，主线程的mainloop
+    std::unique_ptr<EventLoopThreadPool> m_eventloopthreadpool;
     Acceptor* m_acceptor;       // 管理listen sock
     std::atomic<bool> m_start;  // 是否启动
 
     using ConnectionMap = std::map<std::string, TcpConnectionPtr>;
     ConnectionMap m_connections;  // 连接集合
     const std::string m_name;     // tcpserver的名称
+    const std::string m_ipPort;   // server绑定的ip和port
     int m_nextConnId;             // 为了标记创建的连接
 
     // 业务逻辑函数

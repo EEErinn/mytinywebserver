@@ -4,6 +4,7 @@
 #include <sys/epoll.h>
 
 #include "eventloop.h"
+#include "log/LogUtils.h"
 
 namespace mytinywebserver {
 
@@ -22,6 +23,7 @@ Channel::Channel(EventLoop* loop, int fd)
 // channel析构前要确保channel执行了removeself。
 // 一般在拥有channel的对象的析构会调用removeself,如accpetor、eventloop
 Channel::~Channel() {
+    LOG_DEBUG << "Channel::~Channel destructing";
     // if (m_loop->hasChannel(this)) removeSelf();
     // assert(!m_loop->hasChannel(this));
 }
@@ -63,17 +65,22 @@ void Channel::tie(const std::shared_ptr<void>& v) {
 }
 
 // EPOLLPRI: 高优先级数据可读，如tcp带外数据
-// EPOLLHUP：挂起。管道的写端被关闭后，读端描述符上收到EPOLLHUP信号
+// EPOLLHUP：挂起。管道的写端被关闭后，读端描述符上收到EPOLLHUP信号。在注册事件的时候这个事件是默认添加。
 // EPOLLRDHUP：tcp连接被对方关闭，或者对方关闭了写操作
+// EPOLLERR： 表示对应的文件描述符发生错误；写已关闭socket pipe broken
 void Channel::handleEventWithGuard(Timestamp receiveTime) {
+    LOG_DEBUG << reventsToString();
     if ((m_revents & EPOLLHUP) && !(m_revents & EPOLLIN)) {
         if (m_closeCallBack_) m_closeCallBack_();
-    } else if (m_revents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
-        if (m_readCallBack_) m_readCallBack_(receiveTime);
-    } else if (m_revents & EPOLLOUT) {
-        if (m_writeCallBack_) m_writeCallBack_();
-    } else if (m_revents & EPOLLERR) {
+    }
+    if (m_revents & (EPOLLERR | 0x020)) {
         if (m_errorCallBack_) m_errorCallBack_();
+    }
+    if (m_revents & (EPOLLIN | EPOLLPRI | EPOLLRDHUP)) {
+        if (m_readCallBack_) m_readCallBack_(receiveTime);
+    }
+    if (m_revents & EPOLLOUT) {
+        if (m_writeCallBack_) m_writeCallBack_();
     }
 }
 
@@ -88,6 +95,26 @@ void Channel::handleEvent(Timestamp receiveTime) {
     } else {
         handleEventWithGuard(receiveTime);
     }
+}
+std::string Channel::eventsToString(const int fd, const int ev) const {
+    std::ostringstream oss;
+    oss << fd << ": ";
+    if (ev & EPOLLIN) oss << "IN ";
+    if (ev & EPOLLPRI) oss << "PRI ";
+    if (ev & EPOLLOUT) oss << "OUT ";
+    if (ev & EPOLLHUP) oss << "HUP ";
+    if (ev & EPOLLRDHUP) oss << "RDHUP ";
+    if (ev & EPOLLERR) oss << "ERR ";
+
+    return oss.str();
+}
+
+std::string Channel::reventsToString() const {
+    return eventsToString(m_fd, m_revents);
+}
+
+std::string Channel::eventsToString() const {
+    return eventsToString(m_fd, m_events);
 }
 
 }  // namespace mytinywebserver

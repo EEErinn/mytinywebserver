@@ -17,12 +17,14 @@
 
 namespace {
 
+// 当客户端已经关闭，服务器端仍在写会触发SIGPIPE信号，导致服务器关闭，因此忽略该信号
 class IgnoreSigPipe {
    public:
     IgnoreSigPipe() { ::signal(SIGPIPE, SIG_IGN); }
 };
 IgnoreSigPipe initObj;
 }  // namespace
+
 namespace mytinywebserver {
 
 class Channel;

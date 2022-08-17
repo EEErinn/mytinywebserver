@@ -14,6 +14,7 @@ TcpServer::TcpServer(EventLoop* loop, const InetAddress& addr, int threadNum,
     : m_loop(loop),
       m_eventloopthreadpool(new EventLoopThreadPool(loop, threadNum)),
       m_acceptor(new Acceptor(loop, addr)),
+      m_start(false),
       m_name(name),
       m_ipPort(addr.toString()),
       m_nextConnId(0) {

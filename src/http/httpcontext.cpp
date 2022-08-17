@@ -99,6 +99,9 @@ HttpContext::HttpRequestParseCode HttpContext::parseRequest(
             }
             case kExpectHeaders: {
                 auto ops = processHeaderLine(buf->beginRead(), crlf);
+                buf->retrieveUntil(
+                    crlf + 2);  // note 即使结尾也要移2 不然bufer里始终保留\r\n
+                                // 让下一次请求失效
                 if (ops) {
                     const std::string key = ops.get().first;
                     const std::string val = ops.get().second;
@@ -110,7 +113,6 @@ HttpContext::HttpRequestParseCode HttpContext::parseRequest(
                     // FIXME: empty line, end of header
                     return GET_REQUEST;
                 }
-                buf->retrieveUntil(crlf + 2);
                 break;
             }
             case kExpectBody: {

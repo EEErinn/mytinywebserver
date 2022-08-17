@@ -44,6 +44,8 @@ void HttpServer::onMessage(const TcpConnectionPtr& conn, Buffer* buf,
         conn->shutdown();
     } else if (res == HttpContext::HttpRequestParseCode::GET_REQUEST) {
         LOG_DEBUG << "GET_REQUEST";
+        LOG_DEBUG << "buf extra data : " << buf->readableSize();
+        // LOG_DEBUG << buf->retrieveAllAsString();
         onRequest(conn, context->request());
         context->reset();  // 重置上下文，将request置空
     } else if (res == HttpContext::HttpRequestParseCode::NO_REQUEST) {

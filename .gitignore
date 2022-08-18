@@ -36,3 +36,6 @@ build/*
 lib/*
 bin/*
 
+!build/.gitkeep
+!lib/.gitkeep
+!bin/.gitkeep

@@ -23,7 +23,7 @@ Acceptor::Acceptor(EventLoop* loop, const InetAddress& addr)
 }
 
 Acceptor::~Acceptor() {
-    // m_channel->disableAll();
+    m_channel->disableAll();
     m_channel->removeSelf();
 }
 

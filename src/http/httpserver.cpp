@@ -31,6 +31,13 @@ void HttpServer::onConnection(const TcpConnectionPtr& conn) {
     }
 }
 
+void HttpServer::delayTimer(const TcpConnectionPtr& conn) {
+    std::weak_ptr<Entry> weakPtr = conn->getWeakPtr();
+    std::shared_ptr<Entry> entry(weakPtr.lock());
+    std::shared_ptr<TimerNode> timer(new TimerNode(entry, TcpServer::TIME_OUT));
+    m_server.getTimerManager()->addTimer(timer);
+}
+
 void HttpServer::onMessage(const TcpConnectionPtr& conn, Buffer* buf,
                            Timestamp receiveTime) {
     // 将conn中的boost::any 的 context准换成HttpContext
@@ -38,6 +45,7 @@ void HttpServer::onMessage(const TcpConnectionPtr& conn, Buffer* buf,
         boost::any_cast<HttpContext>(conn->getMutableContext());
     HttpContext::HttpRequestParseCode res =
         context->parseRequest(buf, receiveTime);
+    delayTimer(conn);
     if (res == HttpContext::HttpRequestParseCode::BAD_REQUEST) {
         LOG_DEBUG << "HTTP/1.1 400 Bad Request";
         conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");

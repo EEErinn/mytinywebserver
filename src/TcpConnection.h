@@ -10,7 +10,6 @@
 #include "channel.h"
 #include "eventloop.h"
 #include "socket.h"
-
 namespace mytinywebserver {
 /**
  * @brief TcpConnection生命周期不稳定
@@ -20,6 +19,9 @@ namespace mytinywebserver {
  * 想用shared_from_this，那么
  * tcpserver调用newConnection时需要使用shared_ptr创建TcpConnection 和线程安全
  */
+class Entry;
+class TimerManager;
+
 class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
    private:
     enum StateE { kconnecting, kConnected, kDisconnected, kDisconnecting };
@@ -31,6 +33,8 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
 
     // 用于tcpserver接受一个新的连接后
     void connectEstablished();
+    void newConnTimer(TimerManager*, int);  // 为新连接创建timer
+
     // 用于tcpserver将其从map中移除后，通知用户连接已断开，是析构前的最后一个成员函数。
     void connectDestoryed();
 
@@ -42,6 +46,8 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     void sendInloop(const void* message, size_t len);
 
     // 主动关闭连接， 可跨线程
+    void forceClose();
+    void forceCloseInLoop();
     void shutdown();
     void shutdownInloop();
 
@@ -55,6 +61,7 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     const boost::any& getContext() const { return m_context; }
     boost::any* getMutableContext() { return &m_context; }
     bool connected() const { return m_state == kConnected; }
+    std::weak_ptr<Entry>& getWeakPtr() { return m_weakEntry; }
 
     // setter
     void setCloseCallBack(const CloseCallBack_& v) { m_closeCallBack = v; }
@@ -65,6 +72,7 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
         m_messageCallBack = v;
     }
     void setContext(const boost::any& v) { m_context = v; }
+    void setWeakPtr(const std::weak_ptr<Entry>& v) { m_weakEntry = v; }
 
    private:
     // 事件处理函数
@@ -91,6 +99,8 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     // const InetAddress m_peerAddr;
     // 上层用户请求上下文。一般在连接建立时 调用的connectionCallback_中设置
     boost::any m_context;
+    // 定时器相关
+    std::weak_ptr<Entry> m_weakEntry;  // 防止循环引用
 };
 
 }  // namespace mytinywebserver

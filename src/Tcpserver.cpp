@@ -9,6 +9,7 @@
 
 namespace mytinywebserver {
 
+const int TcpServer::TIME_OUT = 10;
 TcpServer::TcpServer(EventLoop* loop, const InetAddress& addr, int threadNum,
                      const std::string& name)
     : m_loop(loop),
@@ -17,7 +18,8 @@ TcpServer::TcpServer(EventLoop* loop, const InetAddress& addr, int threadNum,
       m_start(false),
       m_name(name),
       m_ipPort(addr.toString()),
-      m_nextConnId(0) {
+      m_nextConnId(0),
+      m_timerQueue(std::make_unique<TimerManager>(loop)) {
     m_acceptor->setNewconnectionCallBack(
         std::bind(&TcpServer::newConnection, this, std::placeholders::_1));
 }
@@ -68,8 +70,7 @@ void TcpServer::newConnection(int fd) {
     std::string connName = m_name + buf;
     EventLoop* loop = m_eventloopthreadpool->getNextLoop();
     LOG_INFO << "TcpServer::newConnection [" << m_name << "] - new connection ["
-             << connName;
-    //  << "] from " << peerAddr.toIpPort();
+             << connName;  //  << "] from " << peerAddr.toIpPort();
     TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop, fd, connName);
     m_connections[connName] = conn;
     conn->setConnectionCallBack(m_connectionCallBack);
@@ -78,6 +79,8 @@ void TcpServer::newConnection(int fd) {
         std::bind(&TcpServer::removeConnection, this, std::placeholders::_1));
     // 建立连接，channel注册到poller，可读
     loop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
+    loop->runInLoop(std::bind(&TcpConnection::newConnTimer, conn,
+                              m_timerQueue.get(), TIME_OUT));
 }
 
 }  // namespace mytinywebserver

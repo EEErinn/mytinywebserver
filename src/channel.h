@@ -15,6 +15,7 @@ namespace mytinywebserver {
 class EventLoop;
 // channel不包含poller，所以通过eventloop通讯
 // channel的成员函数都只能在I/O线程调用，因此更新数据成员不需要加锁
+// channel析构函数不负责关闭fd
 class Channel : noncopyable {
    public:
     Channel(EventLoop* loop, int fd);

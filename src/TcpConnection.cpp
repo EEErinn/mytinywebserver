@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include "Timer.h"
 #include "log/LogUtils.h"
 #include "socketops.h"
 
@@ -37,6 +38,14 @@ void TcpConnection::connectEstablished() {
     m_channel->tie(shared_from_this());
     m_channel->enableReading();
     m_connectionCallBack(shared_from_this());
+}
+
+void TcpConnection::newConnTimer(TimerManager* timerQueue, int timeout) {
+    std::shared_ptr<Entry> entry(new Entry(shared_from_this()));
+    std::shared_ptr<TimerNode> timer(new TimerNode(entry, timeout));
+    timerQueue->addTimer(timer);
+    std::weak_ptr<Entry> weakEntry(entry);
+    setWeakPtr(weakEntry);
 }
 
 void TcpConnection::connectDestoryed() {
@@ -115,7 +124,25 @@ void TcpConnection::sendInloop(const void* message, size_t len) {
         }
     }
 }
+void TcpConnection::forceClose() {
+    // FIXME: use compare and swap
+    if (m_state == kConnected || m_state == kDisconnecting) {
+        setState(kDisconnecting);
+        m_loop->queueInLoop(
+            std::bind(&TcpConnection::forceCloseInLoop, shared_from_this()));
+    }
+}
+
+void TcpConnection::forceCloseInLoop() {
+    m_loop->assertInThread();
+    if (m_state == kConnected || m_state == kDisconnecting) {
+        // as if we received 0 byte in handleRead();
+        handleClose();
+    }
+}
+
 void TcpConnection::shutdown() {
+    LOG_DEBUG << "TcpConnection::shutdown";
     if (m_state == kConnected) {
         setState(kDisconnecting);
         m_loop->runInLoop(std::bind(&TcpConnection::shutdownInloop, this));

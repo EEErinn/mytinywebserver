@@ -7,6 +7,7 @@
 #include "Acceptor.h"
 #include "CallBacks.h"
 #include "TcpConnection.h"
+#include "Timer.h"
 #include "eventloopthreadpool.h"
 
 namespace mytinywebserver {
@@ -19,6 +20,7 @@ namespace mytinywebserver {
  */
 class TcpServer {
    public:
+    static const int TIME_OUT;  // 超时时间 10s
     TcpServer(EventLoop* loop, const InetAddress& addr, int threadNum,
               const std::string& name);
     ~TcpServer();
@@ -34,6 +36,10 @@ class TcpServer {
 
     const std::string& getName() const { return m_name; }
     const std::string& getIpPort() const { return m_ipPort; }
+    // FIXMEE
+    const std::unique_ptr<TimerManager>& getTimerManager() const {
+        return m_timerQueue;
+    }
 
    private:
     void newConnection(int fd);  // 建立新连接
@@ -56,6 +62,8 @@ class TcpServer {
     // 业务逻辑函数
     ConnectionCallBack_ m_connectionCallBack;
     MessageCallBack_ m_messageCallBack;
+
+    std::unique_ptr<TimerManager> m_timerQueue;  // 定时器
 };
 
 }  // namespace mytinywebserver

@@ -40,6 +40,7 @@ class HttpServer {
     // 被onMessage调用。根据连接和request得到response，并发送给客户端
     void onRequest(const TcpConnectionPtr&, const HttpRequest&);
 
+    void delayTimer(const TcpConnectionPtr& conn);
     TcpServer m_server;
     HttpCallback httpCallback_;
 };

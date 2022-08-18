@@ -11,9 +11,16 @@ class Timestamp {
 
     static Timestamp now();
     std::string toString() const;
+    bool operator<(const Timestamp&);
+    int getMs() const { return m_ms; }
 
    private:
     int64_t m_ms;
 };
+
+inline Timestamp addTime(Timestamp timestamp, double seconds) {
+    int64_t delta = static_cast<int64_t>(seconds);
+    return Timestamp(timestamp.getMs() + delta);
+}
 
 }  // namespace mytinywebserver

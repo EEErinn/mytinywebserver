@@ -1,12 +1,12 @@
 # mytinywebserver
 
 ## 目录结构
-bin: 可执行文件
-build: cmake的产物
-src: 源代码
-lib: 链接文件
-tests: 测试文件
-CMakeLists.txt: cmake文件
+- bin: 可执行文件
+- build: cmake的产物
+- src: 源代码
+- lib: 链接文件
+- tests: 测试文件
+- CMakeLists.txt: cmake文件
 
 ## 开发步骤
 *基本功能(尽量8月1号之前)
@@ -44,9 +44,10 @@ Note: * 为必须完成的功能
 4. 多线程 即thread、eventthread、eventthreadpool
 5. 支持http1.1 url 即httpserver、httpcontext、httprequest、httpresponse
 6. 同步日志
+7. 基于最小堆(优先队列)的定时器处理不活跃连接 2天
 
 Todos:
-
+8. 压测，内存检查
 
 
 

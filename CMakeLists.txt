@@ -33,40 +33,46 @@ set(LIB_SRC
     src/log/LogAppender.cpp
     src/log/singleton.cpp
     src/log/LogUtils.cpp
+    src/Timer.cpp
 )
 
 add_library(mytinywebserver SHARED ${LIB_SRC})
-add_executable(testEventloop tests/testEventloop.cpp)
-add_dependencies(testEventloop mytinywebserver)
-target_link_libraries(testEventloop mytinywebserver)
-target_link_libraries(testEventloop pthread)
+# add_executable(testEventloop tests/testEventloop.cpp)
+# add_dependencies(testEventloop mytinywebserver)
+# target_link_libraries(testEventloop mytinywebserver)
+# target_link_libraries(testEventloop pthread)
 
-add_executable(testEvent tests/testEvent.cpp)
-add_dependencies(testEvent mytinywebserver)
-target_link_libraries(testEvent mytinywebserver)
-target_link_libraries(testEvent pthread)
+# add_executable(testEvent tests/testEvent.cpp)
+# add_dependencies(testEvent mytinywebserver)
+# target_link_libraries(testEvent mytinywebserver)
+# target_link_libraries(testEvent pthread)
 
-add_executable(testAcceptor tests/testAcceptor.cpp)
-add_dependencies(testAcceptor mytinywebserver)
-target_link_libraries(testAcceptor mytinywebserver)
-target_link_libraries(testAcceptor pthread)
+# add_executable(testAcceptor tests/testAcceptor.cpp)
+# add_dependencies(testAcceptor mytinywebserver)
+# target_link_libraries(testAcceptor mytinywebserver)
+# target_link_libraries(testAcceptor pthread)
 
 add_executable(testHttpServer tests/testHttpserver.cpp)
 add_dependencies(testHttpServer mytinywebserver)
 target_link_libraries(testHttpServer mytinywebserver)
 target_link_libraries(testHttpServer pthread)
 
-add_executable(testSharedPtr tests/testSharedPtr.cpp)
+# add_executable(testSharedPtr tests/testSharedPtr.cpp)
 
-add_executable(testLog tests/testLog.cpp)
-add_dependencies(testLog mytinywebserver)
-target_link_libraries(testLog mytinywebserver)
-target_link_libraries(testLog pthread)
+# add_executable(testLog tests/testLog.cpp)
+# add_dependencies(testLog mytinywebserver)
+# target_link_libraries(testLog mytinywebserver)
+# target_link_libraries(testLog pthread)
 
 # set(LIB_SRC
 #     src/log/a.cpp
 #     src/log/singleton.cpp
 # )
+
+add_executable(testTimer tests/testTimer.cpp)
+add_dependencies(testTimer mytinywebserver)
+target_link_libraries(testTimer mytinywebserver)
+target_link_libraries(testTimer pthread)
 
 # # add_library(singleton SHARED ${LIB_SRC})
 # add_executable(testSingleton tests/testSingleton.cpp)

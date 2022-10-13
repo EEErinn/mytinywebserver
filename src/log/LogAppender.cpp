@@ -93,12 +93,10 @@ void AyncFileLogAppender::flush() {
     }
 
     for (const auto &buffer : buffersToWrite) {
-        // FIXME: use unbuffered stdio FILE ? or use ::writev ?
         file_->append(buffer->data(), buffer->length());
     }
 
     if (buffersToWrite.size() > 2) {
-        // drop non-bzero-ed buffers, avoid trashing
         buffersToWrite.resize(2);
     }
 

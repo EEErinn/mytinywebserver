@@ -10,11 +10,10 @@ thread_local char t_time[64];
 thread_local time_t t_lastSecond;
 
 AppendFile::AppendFile(const char* filename)
-    : fp_(::fopen(filename, "ae")),  // 'e' for O_CLOEXEC
+    : fp_(::fopen(filename, "ae")),
       writtenBytes_(0) {
     assert(fp_);
     ::setbuffer(fp_, buffer_, sizeof(buffer_));
-    // posix_fadvise POSIX_FADV_DONTNEED ?
 }
 
 AppendFile::~AppendFile() { ::fclose(fp_); }
@@ -41,7 +40,6 @@ void AppendFile::append(const char* logline, const size_t len) {
 void AppendFile::flush() { ::fflush(fp_); }
 
 size_t AppendFile::write(const char* logline, size_t len) {
-    // #undef fwrite_unlocked
     return ::fwrite_unlocked(logline, 1, len, fp_);
 }
 
@@ -117,7 +115,7 @@ std::string LogFile::getLogFileName(const std::string& basename, time_t* now) {
     char timebuf[32];
     struct tm tm;
     *now = time(NULL);
-    gmtime_r(now, &tm);  // FIXME: localtime_r ?
+    gmtime_r(now, &tm);
     strftime(timebuf, sizeof(timebuf), ".%Y%m%d-%H%M%S", &tm);
     filename += timebuf;
     filename += ".log";

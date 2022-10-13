@@ -57,6 +57,7 @@ class SyncFileLogAppender : public LogAppender {
         if (event->getLevel() >= logger->getLevel()) {
             std::unique_lock<std::mutex> lock(m_mutex);
             m_filestream << m_formatter->format(event);
+            m_filestream.flush();
         }
     }
     bool reopen();

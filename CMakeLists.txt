@@ -39,6 +39,11 @@ add_dependencies(testHttpServer mytinywebserver)
 target_link_libraries(testHttpServer mytinywebserver)
 target_link_libraries(testHttpServer pthread)
 
+add_executable(log tests/testLog.cpp)
+add_dependencies(log mytinywebserver)
+target_link_libraries(log mytinywebserver)
+target_link_libraries(log pthread)
+
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

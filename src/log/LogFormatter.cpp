@@ -1,15 +1,13 @@
 #include "LogFormatter.h"
 
 #include "LogEvent.h"
-#include "Logger.h"
+
 namespace mytinywebserver {
 
 class MessageFormatItem : public LogFormatter::FormatItem {
    public:
     MessageFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << event->getContent();
     }
 };
@@ -17,51 +15,26 @@ class MessageFormatItem : public LogFormatter::FormatItem {
 class LevelFormatItem : public LogFormatter::FormatItem {
    public:
     LevelFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << LogLevel::toString(level);
-        ;
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
+        os << LogLevel::toString(event->getLevel());
     }
 };
 
-class ElapseFormatItem : public LogFormatter::FormatItem {
-   public:
-    ElapseFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << event->getElapse();
-    }
-};
+
 
 class NameFormatItem : public LogFormatter::FormatItem {
    public:
     NameFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << logger->getName();
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
+        os << event->getLoggername();
     }
 };
 
 class ThreadIdFormatItem : public LogFormatter::FormatItem {
    public:
     ThreadIdFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << event->getThreadId();
-    }
-};
-
-class FiberIdFormatItem : public LogFormatter::FormatItem {
-   public:
-    FiberIdFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << event->getFiberId();
     }
 };
 
@@ -73,9 +46,7 @@ class DateFormatItem : public LogFormatter::FormatItem {
             m_format = "%Y-%m-%d %H:%M:%S";
         }
     }
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         struct tm tm;
         time_t time = event->getTime();
         localtime_r(&time, &tm);
@@ -91,9 +62,7 @@ class DateFormatItem : public LogFormatter::FormatItem {
 class FilenameFormatItem : public LogFormatter::FormatItem {
    public:
     FilenameFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << event->getFile();
     }
 };
@@ -101,9 +70,7 @@ class FilenameFormatItem : public LogFormatter::FormatItem {
 class LineFormatItem : public LogFormatter::FormatItem {
    public:
     LineFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << event->getLine();
     }
 };
@@ -111,39 +78,23 @@ class LineFormatItem : public LogFormatter::FormatItem {
 class NewLineFormatItem : public LogFormatter::FormatItem {
    public:
     NewLineFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << std::endl;
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
+        os << "\n";
     }
 };
 
 class TabFormatItem : public LogFormatter::FormatItem {
    public:
     TabFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << " ";
-    }
-};
-
-class ThreadNameFormatItem : public LogFormatter::FormatItem {
-   public:
-    ThreadNameFormatItem(const std::string& str = "") {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
-        os << event->getThreadName();
     }
 };
 
 class StringFormatItem : public LogFormatter::FormatItem {
    public:
     StringFormatItem(const std::string& str) : m_string(str) {}
-    void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                LogLevel::Level level,
-                std::shared_ptr<LogEvent> event) override {
+    void format(std::ostream& os, std::shared_ptr<LogEvent> event) override {
         os << m_string;
     }
 
@@ -155,18 +106,16 @@ LogFormatter::LogFormatter(const std::string& pattern) : m_pattern(pattern) {
     init();
 }
 
-std::string LogFormatter::format(std::shared_ptr<Logger> logger,
-                                 LogLevel::Level level,
-                                 std::shared_ptr<LogEvent> event) {
+std::string LogFormatter::format(std::shared_ptr<LogEvent> event) {
     std::stringstream ss;
     for (auto& i : m_items) {
-        i->format(ss, logger, level, event);
+        i->format(ss, event);
     }
     return ss.str();
 }
 
 // %xxx %xxx{xxx} %%
-// 默认格式 "%d{%Y-%m-%d %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"
+// 默认格式 "%d{%Y-%m-%d %H:%M:%S}%T%t%T[%p]%T[%c]%T%f:%l%T%m%n"
 void LogFormatter::init() {
     // str(d) format type
     std::vector<std::tuple<std::string, std::string, int> > vec;
@@ -260,7 +209,6 @@ void LogFormatter::init() {
             // %H:%M:%S}%T%t%T%N%T%F%T[%p]%T[%c]%T%f:%l%T%m%n"
             XX(m, MessageFormatItem),     // m:消息
             XX(p, LevelFormatItem),       // p:日志级别
-            XX(r, ElapseFormatItem),      // r:累计毫秒数
             XX(c, NameFormatItem),        // c:日志名称
             XX(t, ThreadIdFormatItem),    // t:线程id
             XX(n, NewLineFormatItem),     // n:换行
@@ -268,8 +216,6 @@ void LogFormatter::init() {
             XX(f, FilenameFormatItem),    // f:文件名
             XX(l, LineFormatItem),        // l:行号
             XX(T, TabFormatItem),         // T:Tab
-            XX(F, FiberIdFormatItem),     // F:协程id
-            XX(N, ThreadNameFormatItem),  // N:线程名称
 #undef XX
         };
 

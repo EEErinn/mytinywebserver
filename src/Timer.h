@@ -2,6 +2,7 @@
 #include <deque>
 #include <memory>
 #include <queue>
+#include <mutex>
 
 #include "TcpConnection.h"
 #include "Timestamp.h"
@@ -54,13 +55,14 @@ class TimerManager {
     TimerManager(EventLoop *loop);
     ~TimerManager();
     void setTimePer(int fd);                     // 设置时钟频率
-    void addTimer(const TimerNode::TimerPtr &);  // 添加定时器
+    void addTimer(TimerNode::TimerPtr);  // 添加定时器
     void handleRead();                           // 超时触发
 
    private:
     EventLoop *m_loop;
     const int m_timerFd;  // 定时器，相当于alarm
     Channel m_timerChannel;
+    std::mutex m_mutex;
 
     using Deque = std::deque<TimerNode::TimerPtr>;
     std::priority_queue<TimerNode::TimerPtr, Deque, TimerCmp> m_queue;

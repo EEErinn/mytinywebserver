@@ -1,10 +1,14 @@
 #pragma once
 #include <fstream>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "LogEvent.h"
+#include "LogFile.h"
 #include "LogFormatter.h"
 #include "Logger.h"
+
 namespace mytinywebserver {
 
 //日志输出地
@@ -14,55 +18,95 @@ class LogAppender {
     LogAppender() {}
     virtual ~LogAppender() {}
 
-    virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level,
+    virtual void log(std::shared_ptr<Logger> logger,
                      std::shared_ptr<LogEvent> event) = 0;
     virtual void flush() {}
+    virtual void setNotifyFunc(const std::function<void()>& notify_func) {}
 
     LogFormatter::ptr getFormatter() { return m_formatter; }
-    LogLevel::Level getLevel() const { return m_level; }
-
     void setFormatter(LogFormatter::ptr val) { m_formatter = val; }
-    void setLevel(LogLevel::Level val) { m_level = val; }
 
    protected:
-    LogLevel::Level m_level = LogLevel::Level::DEBUG;
-    // 日志格式器
     LogFormatter::ptr m_formatter;
+    std::mutex m_mutex;
 };
 
-// 输出到控制台
+// 同步输出到控制台
 class StdoutLogAppender : public LogAppender {
    public:
-    typedef std::shared_ptr<StdoutLogAppender> ptr;
-    virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level,
-                     std::shared_ptr<LogEvent> event) override {
-        if (level >= m_level) {
-            std::cout << m_formatter->format(logger, level, event);
+    using ptr = std::shared_ptr<StdoutLogAppender>;
+    void log(std::shared_ptr<Logger> logger,
+             std::shared_ptr<LogEvent> event) override {
+        if (event->getLevel() >= logger->getLevel()) {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            std::cout << m_formatter->format(event);
         }
     }
 };
 
-// 输出到文件
-class FileLogAppender : public LogAppender {
+// 同步输出到文件
+class SyncFileLogAppender : public LogAppender {
    public:
-    typedef std::shared_ptr<StdoutLogAppender> ptr;
-    FileLogAppender(const std::string& filename) : m_filename(filename) {
+    using ptr = std::shared_ptr<StdoutLogAppender>;
+    explicit SyncFileLogAppender(const std::string& filename)
+        : m_filename(filename) {
         if (!reopen()) throw std::exception();
     }
-    virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level,
-                     std::shared_ptr<LogEvent> event) override {
-        if (level >= m_level) {
-            m_filestream << m_formatter->format(logger, level, event);
+    void log(std::shared_ptr<Logger> logger,
+             std::shared_ptr<LogEvent> event) override {
+        if (event->getLevel() >= logger->getLevel()) {
+            std::unique_lock<std::mutex> lock(m_mutex);
+            m_filestream << m_formatter->format(event);
         }
     }
     bool reopen();
-    ~FileLogAppender() {
-        if (m_filestream) m_filestream.close();
+    ~SyncFileLogAppender() {
+        if (m_filestream) {
+            m_filestream.flush();
+            m_filestream.close();
+        }
     }
 
    private:
     std::string m_filename;
     std::ofstream m_filestream;
+};
+
+// 异步输出到文件
+class AyncFileLogAppender : public LogAppender {
+   public:
+    AyncFileLogAppender(const std::string& filepath, off_t rollSize);
+    virtual ~AyncFileLogAppender() {}
+
+    void log(std::shared_ptr<Logger> logger,
+             std::shared_ptr<LogEvent> event) override;
+    void flush() override;
+
+    void setNotifyFunc(const std::function<void()>& notify_func) override;
+    bool empty();
+
+   private:
+    using Buffer = mytinywebserver::detail::FixedBuffer<
+        mytinywebserver::detail::kLargeBuffer>;
+    using BufferVector = std::vector<std::unique_ptr<Buffer>>;
+    using BufferPtr = BufferVector::value_type;
+
+    BufferPtr currentBuffer_;  // 当前缓冲
+    BufferPtr nextBuffer_;     // 预备缓冲
+    BufferVector buffers_;     //待写入文件的已填满的缓冲区
+
+    // 输出缓冲区们
+    BufferPtr newBuffer1;
+    BufferPtr newBuffer2;
+    BufferVector buffersToWrite;
+
+    const std::string filepath_;
+    const off_t rollSize_;
+    std::unique_ptr<LogFile> file_;
+    uint64_t lastTime_;
+
+    // 唤醒日志线程
+    std::function<void()> notify_func_;  // 回调函数
 };
 
 }  // namespace mytinywebserver

@@ -3,7 +3,7 @@
 
 #include "channel.h"
 #include "eventloop.h"
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 #include "socketops.h"
 
 namespace mytinywebserver {
@@ -35,14 +35,15 @@ void Acceptor::listen() {
 }
 
 void Acceptor::handleRead(Timestamp receiveTime) {
-    int connfd = m_listenSock.accept();  // 返回客户端连接的fd
-    if (connfd > 0) {
+    int connfd = 0;  // 返回客户端连接的fd
+    while ((connfd = m_listenSock.accept()) > 0) {
         if (m_newConnectionCallBack) {
             m_newConnectionCallBack(connfd);
         } else {
             socket::closeFd(connfd);
         }
-    } else {
+    }
+    if (connfd < 0) {
         LOG_ERROR << "in Acceptor::handleRead";
         // if (errno == EMFILE) {
         //     ::close(idleFd_);

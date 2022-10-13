@@ -22,7 +22,6 @@ class HttpServer {
                const std::string& name, int numThreads);
 
     ~HttpServer();
-    // EventLoop* getLoop() const { return m_serve }
 
     /// Not thread safe, callback be registered before calling start().
     void setHttpCallback(const HttpCallback& cb) { httpCallback_ = cb; }
@@ -41,6 +40,7 @@ class HttpServer {
     void onRequest(const TcpConnectionPtr&, const HttpRequest&);
 
     void delayTimer(const TcpConnectionPtr& conn);
+
     TcpServer m_server;
     HttpCallback httpCallback_;
 };

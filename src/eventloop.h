@@ -28,7 +28,7 @@ IgnoreSigPipe initObj;
 namespace mytinywebserver {
 
 class Channel;
-class Poller;
+class EpollPoller;
 
 // eventloop 拥有poller
 // one loop per thread 保证线程安全
@@ -67,7 +67,7 @@ class EventLoop : noncopyable {
     using ChannelList = std::vector<Channel*>;
     ChannelList m_activeChannels;
 
-    std::unique_ptr<Poller> m_poller;  //
+    std::unique_ptr<EpollPoller> m_poller;
 
     const pid_t m_threadId;  // 创建该对象的线程Id
 

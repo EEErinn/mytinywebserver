@@ -2,7 +2,7 @@
 
 #include <sys/timerfd.h>
 
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 namespace mytinywebserver {
 int createTimerfd() {
     int timeFd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
@@ -50,16 +50,20 @@ void TimerManager::setTimePer(int fd) {
     }
 }
 
-void TimerManager::addTimer(const TimerNode::TimerPtr& v) { m_queue.push(v); }
+void TimerManager::addTimer(TimerNode::TimerPtr v) {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    m_queue.push(v); 
+}
 
 void TimerManager::handleRead() {
     LOG_DEBUG << "Timer::handleRead";
     uint64_t val;
     int ret = read(m_timerFd, &val, sizeof(val));
-    if (ret != sizeof(val)) {  // ret should be 8
+    if (ret != sizeof(val)) {
         LOG_ERROR << "read " << ret << "bytes instead of 8 frome timerfd";
     }
     Timestamp curTime = Timestamp::now();
+    std::unique_lock<std::mutex> lock(m_mutex);
     while (!m_queue.empty()) {
         if (m_queue.top()->getExpTime() < curTime) {
             LOG_DEBUG << "TCPconnection timeout";

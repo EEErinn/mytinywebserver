@@ -26,7 +26,7 @@ class EventLoopThreadPool {
     int m_threadNum;  // I/O线程数量
     std::vector<EventLoopThreadPtr> m_threads;
     std::vector<EventLoop*> m_loops;
-    int nextId;  // robin分配loop
+    int nextId;  // robin round分配loop
 };
 
 }  // namespace mytinywebserver

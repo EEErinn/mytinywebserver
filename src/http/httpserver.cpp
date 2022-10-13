@@ -1,6 +1,6 @@
 #include "httpserver.h"
 
-#include "../log/LogUtils.h"
+#include "../log/LogManager.h"
 
 namespace mytinywebserver {
 

@@ -14,10 +14,9 @@ class EventLoopThread {
     ~EventLoopThread();
 
     EventLoop* start();
-
+   private:
     void threadFunc();
 
-   private:
     EventLoop* m_loop;
 
     std::thread m_thread;

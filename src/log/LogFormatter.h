@@ -3,11 +3,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 
-#include "Logger.h"
 namespace mytinywebserver {
-
-class Logger;
+class LogStream;
 class LogEvent;
 // class LogLevel;
 
@@ -16,18 +15,15 @@ class LogFormatter {
    public:
     using ptr = std::shared_ptr<LogFormatter>;
     LogFormatter(const std::string& pattern);
-    // 将event转换为字符串
-    std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level,
-                       std::shared_ptr<LogEvent> event);
+    // 将event转换为字符串, 存在ss中
+    std::string format(std::shared_ptr<LogEvent> event);
 
    public:
     class FormatItem {
        public:
         typedef std::shared_ptr<FormatItem> ptr;
         virtual ~FormatItem() {}
-        virtual void format(std::ostream& os, std::shared_ptr<Logger> logger,
-                            LogLevel::Level level,
-                            std::shared_ptr<LogEvent> event) = 0;
+        virtual void format(std::ostream& os, std::shared_ptr<LogEvent> event) = 0;
     };
 
     void init();  // pattern 解析

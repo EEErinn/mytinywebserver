@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 
 namespace mytinywebserver {
 const char Buffer::kCRLF[] = "\r\n";

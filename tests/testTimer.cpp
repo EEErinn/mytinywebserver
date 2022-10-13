@@ -2,8 +2,9 @@
 
 #include <memory>
 #include <string>
-#include "../src/log/LogUtils.h"
+
 #include "../src/Timer.h"
+#include "../src/log/LogManager.h"
 
 using namespace mytinywebserver;
 
@@ -23,7 +24,7 @@ int main() {
     LOG_DEBUG << conn << " " << conn.use_count();
     timerQueue->addTimer(
         std::make_shared<TimerNode>(std::make_shared<Entry>(conn), 8));
-    
+
     LOG_DEBUG << "CONN" << conn << " " << conn.use_count();
     loop.loop();
 }

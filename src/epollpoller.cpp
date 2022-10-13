@@ -5,7 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 
 namespace mytinywebserver {
 
@@ -19,7 +19,7 @@ EpollPoller::EpollPoller()
 
 EpollPoller::~EpollPoller() { ::close(m_epollfd); }
 
-void EpollPoller::poll(int fd, ChannelList* activeChannels) {
+void EpollPoller::poll(ChannelList* activeChannels) {
     LOG_DEBUG << "fd total count " << m_channelMap.size();
     int ret =
         ::epoll_wait(m_epollfd, &*m_eventList.begin(), m_eventList.size(), -1);
@@ -100,6 +100,11 @@ void EpollPoller::removeChannel(Channel* channel) {
     }
 
     channel->setIndex(Channel::State::sNew);
+}
+
+bool EpollPoller::hasChannel(Channel* channel) {
+    auto it = m_channelMap.find(channel->getFd());
+    return it != m_channelMap.end() && it->second == channel;
 }
 
 }  // namespace mytinywebserver

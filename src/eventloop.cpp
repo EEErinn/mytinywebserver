@@ -8,8 +8,8 @@
 
 #include "CurrentThread.h"
 #include "channel.h"
-#include "log/LogUtils.h"
-#include "poller.h"
+#include "epollpoller.h"
+#include "log/LogManager.h"
 #include "socketops.h"
 
 namespace mytinywebserver {
@@ -26,7 +26,7 @@ int createEventFd() {
 __thread EventLoop* t_loopInThisThread = nullptr;
 
 EventLoop::EventLoop()
-    : m_poller(Poller::newDefaultPoller()),
+    : m_poller(new EpollPoller()),
       m_threadId(CurrentThread::tid()),
       m_looping(false),
       m_quit(false),
@@ -75,7 +75,7 @@ void EventLoop::loop() {
     LOG_DEBUG << "EventLoop " << this << " start looping";
     while (!m_quit) {
         m_activeChannels.clear();
-        m_poller->poll(0, &m_activeChannels);
+        m_poller->poll(&m_activeChannels);
 
         for (auto* channel : m_activeChannels) {
             channel->handleEvent(Timestamp::now());

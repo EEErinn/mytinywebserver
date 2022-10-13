@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "eventloop.h"
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 
 namespace mytinywebserver {
 

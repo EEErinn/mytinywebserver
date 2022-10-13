@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 #include "Timer.h"
-#include "log/LogUtils.h"
+#include "log/LogManager.h"
 #include "socketops.h"
 
 namespace mytinywebserver {
@@ -22,6 +22,7 @@ TcpConnection::TcpConnection(EventLoop* loop, int fd, const std::string& name)
     LOG_DEBUG << "TcpConnection::ctor[" << m_name << "] at " << this
               << " fd=" << fd;
     m_connSocket->setKeepAlive(true);
+    m_connSocket->setTcpNoDelay(true);
 }
 
 TcpConnection::~TcpConnection() {
@@ -207,7 +208,7 @@ void TcpConnection::handleError() {
     m_loop->assertInThread();
     int err = socket::getSocketError(m_channel->getFd());
     LOG_ERROR << "TcpConnection::handleError [" << m_name
-              << "] - SO_ERROR = " << err << " " << strerror_tl(err);
+              << "] - SO_ERROR = " << err;
 }
 
 void TcpConnection::handleClose() {

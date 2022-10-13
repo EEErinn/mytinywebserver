@@ -54,7 +54,6 @@ void TcpConnection::connectDestoryed() {
     if (m_state == StateE::kConnected) {
         setState(StateE::kDisconnected);
         m_channel->disableAll();
-        // FIXME: 为什么是m_connectionCallBack而不是m_closeCallBack
         m_connectionCallBack(shared_from_this());
     }
     m_channel->removeSelf();
@@ -105,12 +104,11 @@ void TcpConnection::sendInloop(const void* message, size_t len) {
         n = ::send(m_channel->getFd(), message, len, 0);
         if (n >= 0) {
             if (n == len) {  //写完了，应该执行什么？
-                // shutdown(); // ??
+                // shutdown();
             }
         } else {
             if (errno != EAGAIN || errno != EWOULDBLOCK) {
                 if (errno == EPIPE || errno == ECONNRESET) {
-                    //  忽略错误，让epoll处理？
                     LOG_ERROR << "TcpConnection::sendInLoop";
                     error = true;
                 }
@@ -137,7 +135,6 @@ void TcpConnection::forceClose() {
 void TcpConnection::forceCloseInLoop() {
     m_loop->assertInThread();
     if (m_state == kConnected || m_state == kDisconnecting) {
-        // as if we received 0 byte in handleRead();
         handleClose();
     }
 }
@@ -195,7 +192,6 @@ void TcpConnection::handleWrite() {
                 shutdown();
             }
         } else {
-            // 写出错了？？
             LOG_ERROR << "TcpConnection::handleWrite";
         }
     } else {
@@ -215,10 +211,9 @@ void TcpConnection::handleClose() {
     m_loop->assertInThread();
     LOG_DEBUG << "fd = " << m_channel->getFd() << " is closing";
     assert(m_state == StateE::kConnected || m_state == StateE::kDisconnecting);
-    // we don't close fd, leave it to dtor, so we can find leaks easily.
     setState(kDisconnected);
     m_channel->disableAll();
-    m_connectionCallBack(shared_from_this());  // ?
+    m_connectionCallBack(shared_from_this());
     m_closeCallBack(shared_from_this());
 }
 

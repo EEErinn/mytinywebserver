@@ -59,7 +59,6 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn) {
     EventLoop* connLoop = conn->getLoop();
     // connectDestoryed将channel从监听集合移除，引用计数-1，tcpconnection将析构
     // 一定要用queueInLoop，因为channel在handleEvent调用removeConnectionInLoop，在这里面不能删除channel
-    // FIXME: 实验验证不用queueInLoop
     connLoop->queueInLoop(std::bind(&TcpConnection::connectDestoryed, conn));
 }
 

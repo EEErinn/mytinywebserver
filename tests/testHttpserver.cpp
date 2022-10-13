@@ -10,8 +10,6 @@ using namespace mytinywebserver;
 extern char favicon[555];
 bool benchmark = true;
 
-// FIXME： 有时请求/favicon.ico可以成功，请求/hello返回400 Bad Request；反之亦然
-// 目前还没定位到原因。压测时估计会出现这种情况
 void onRequest(const HttpRequest& req, HttpResponse* resp) {
     LOG_DEBUG << "Headers " << req.methodString() << " " << req.path();
     if (!benchmark) {
@@ -51,7 +49,7 @@ void onRequest(const HttpRequest& req, HttpResponse* resp) {
 
 int main() {
     EventLoop loop;
-    HttpServer server(&loop, InetAddress("127.0.0.1", 8080), "dunmmy", 20);
+    HttpServer server(&loop, InetAddress("127.0.0.1", 8080), "dunmmy", 8);
     server.setHttpCallback(onRequest);
     server.start();
     loop.loop();

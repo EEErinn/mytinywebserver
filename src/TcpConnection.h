@@ -90,7 +90,8 @@ class TcpConnection : public std::enable_shared_from_this<TcpConnection> {
     Buffer m_inputBuffer;  // 客户端发送数据，服务端读入数据到m_inputBuffer
     Buffer m_outputBuffer;  // 服务端写数据到m_outputBuffer，输出数据
     // 业务逻辑函数
-    ConnectionCallBack_ m_connectionCallBack;  // 连接建立后执行
+    ConnectionCallBack_
+        m_connectionCallBack;  // 钩子，在连接建立后和连接销毁时会执行一些业务操作
     MessageCallBack_ m_messageCallBack;  // 读事件后执行, 解析读到的inputBuffer
     // 由tcpserver设置
     CloseCallBack_ m_closeCallBack;

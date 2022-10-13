@@ -34,7 +34,6 @@ int Buffer::readFd(int fd, int* saveErrno) {
     } else if (static_cast<size_t>(n) <= writable) {
         m_writeIndex += n;
     } else {
-        LOG_DEBUG << "extra data";
         // 将extra的数据放入m_data, 移动m_writeIndex指针
         m_writeIndex = m_data.size();
         append(extrabuf, n - writable);
@@ -45,7 +44,6 @@ int Buffer::readFd(int fd, int* saveErrno) {
 void Buffer::append(const char* begin, int len) {
     ensureWritableBytes(len);                     // 判断要不要扩容
     std::copy(begin, begin + len, beginWrite());  // 赋值
-    // m_data.insert(m_data.begin() + m_writeIndex, begin, begin + len);
     m_writeIndex += len;  // 修改写索引
 }
 
@@ -59,7 +57,6 @@ void Buffer::ensureWritableBytes(size_t len) {
 
 void Buffer::makeSpace(size_t len) {
     if (writeableSize() + prependableSize() < len + m_cheapPrepend) {
-        // FIXME: move readable data
         m_data.resize(m_writeIndex + len);
     } else {
         // move readable data to the front, make space inside buffer
@@ -76,14 +73,13 @@ void Buffer::makeSpace(size_t len) {
 int Buffer::writeFd(int fd, int* saveErrno) {
     auto n = ::send(fd, beginRead(), readableSize(), 0);
     if (n < 0) {
-        // FIXME: LOG_FATAL
+        LOG_ERROR << "write fd " << fd << " failed";
         *saveErrno = errno;
     }
     return n;
 }
 
 const char* Buffer::findCRLF() const {
-    // FIXME: replace with memmem()?
     const char* crlf = std::search(beginRead(), beginWrite(), kCRLF, kCRLF + 2);
     return crlf == beginWrite() ? NULL : crlf;
 }

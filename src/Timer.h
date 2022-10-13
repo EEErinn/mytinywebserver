@@ -9,12 +9,6 @@
 #include "channel.h"
 #include "eventloop.h"
 
-// 定时事件 TimerNode: 拥有超时时间，TcpConnection,
-// 来新连接add到TimeQueue
-// 当有数据请求时，延长该连接的超时时间 ?
-// 超时时，判断tcp是否还存在，若不存在则直接跳过，若存在则断开连接
-// 当tcp关闭时，若还有Timer需要从队列移除 ?
-// TimeQueue 让其在TIME_OUT时间触发，判断是否超时，超时直接关闭
 
 namespace mytinywebserver {
 // 当Entry引用计数为0时，调用析构函数。Entry添加到TimerManager中。

@@ -8,91 +8,102 @@
 - tests: 测试文件
 - CMakeLists.txt: cmake文件
 
-## 开发步骤
-*基本功能(尽量8月1号之前)
+## 项目介绍
+项目背景：轻量级、高并发的Http服务器
+项目目标：通用网络库、扩展容易、性能高效
+关键技术：
+    1. 使用epoll+LT的多路复用技术，使用主从reactor事件驱动模型
+    2. 使用多核多线程提高并发量，并降低频繁创建线程的开销
+    3. 基于双缓冲区技术实现异步日志
+    4. 使用有限状态机解析http报文，目前暂只支持get请求
+    5. 使用优先队列管理定时器，使用标记删除，处理不活跃的连接。
+结果： 短连接支持2.7wQPS
+
+## 开发流程
+已完成
 - 实现事件循环机制，完成事件处理 即eventloop、poller、channel
 - 完成事件注册 即Acceptor、socket、InetAddress
 - 完成tcp连接 即tcpserver、tcpconnection、buffer
 - 多线程 即thread、eventthread、eventthreadpool
-- 支持http1.1 url 即httpserver、httpcontext、httprequest、httpresponse
-- 压测webbench、内存泄漏检查
-
-*其他辅助功能(可以延期)
+- 支持http1.1 即httpserver、httpcontext、httprequest、httpresponse
 - 定时器
-- 异步日志
-- 优雅关闭
+- 同步/异步日志
+- webbench压测
 
-扩展功能
-- *http cookie、session、serlvet
-- *支持cgi、解析普通文本、json格式等数据
-- *配置系统config
-- *支持文件上传和下载
-- 协程(学习)
+正在开发
+- 支持post请求, 解析普通文本格式
+- 支持文件上传和下载
 
-未来功能
-- *基于该框架，实现一个前后端分离的增删改查项目
-- 用redis从session、mysql数据
-- 支持https
-- 支持代理
- 
-Note: * 为必须完成的功能
+待完成
+- 充分压测，与其他服务器对比
+- 内存泄漏检查
+- http cookie、session、servlet
+- 配置系统config
 
-## 目前进度
-1. 完成事件处理，eventloop - poller - channel 3日
-2. 完成事件注册 即Acceptor、socket、InetAddress 1日
-3. 完成tcp连接 即tcpserver、tcpconnection、buffer 6日
-4. 多线程 即thread、eventthread、eventthreadpool
-5. 支持http1.1 url 即httpserver、httpcontext、httprequest、httpresponse
-6. 同步日志
-7. 基于最小堆(优先队列)的定时器处理不活跃连接 2天
+未来计划
+- 基于该框架，重构一个简易的前后端分离的实验室项目
+- 使用redis存储session、mysql存储数据
+- 支持https(待学)
+- 支持代理(待学)
+- 协程(待学)
 
-Todos:
-8. 压测，内存检查
+### bug解决方案
+1. 客户端断开了，服务器就断开了
+因为客户端断开，服务器还在往客户端写，一直写，触发SIGPIPE信号，默认处理函数就是kill掉服务器。
 
+2. 当在浏览器请求http://127.0.0.1:8080/hello等，服务器程序发送完reponse给服务器后，在处理下一个读事件，handleRead时段错误
+首先，找到core dump文件。参考:[https://www.pudn.com/news/6292ee86e74b9677e8e0a8c8.html].注意，在生成core dump文件时，即使设置了ulimit -c unlimited，也先查一下ulimit -c 看是否为 unlimited.
+    调试core dump， 命令为 gdb ../bin/testHttpServer /var/core/core-testHttpServer-11871-18446744073709551615
+    bt查看堆栈信息，不断cotinue
+    定位是TcpConnection::handleRead，Buffer的读指针没有移动2位。在请求头结束，还有一个\r\n没有处理。
 
+3. 压测时，请求大部分都失败了，最后段错误
+gdb调试core dump定位到定时器的部分。分析代码，发现添加TimerNode忘记加锁了。
 
+4. 并发量不高
+- listen的backlog参数设置为1024
+- 进程可打开的文件描述符设置成65535，ulimit
+- 开启o2编译器优化
 
-## 事件处理遇到的问题
-> Q: muduo为什么poller需要拥有eventloop? 
-- A: 为了在poller中检查当前线程是否是创建所属eventloop的线程。目前认为不重要。因为poller只被eventloop拥有，而eventloop的函数基本保证时线程安全的，所以本人在poller中没有增加eventloop成员变量
+...
 
-> Q: eventloop - poller - channel怎么保证线程安全？
-- A：代填坑
+## 项目中遇到的问题总结
+> 在testEvent中，在每个线程中使用std::cout打印Cureent::tid(),但无法显示输出。
+- 通过gdb调试，b 38 b 25 r n n， 可知代码逻辑正确。但直接执行testEvent则不显示, 定位是std::cout的原因。经分析，是epoll_wait阻塞，因此在每次std::cout时都需要强制从缓冲区取出数据。std::cout.flush()。
 
-> Q: bug: 在testEvent中，在每个线程中使用std::cout打印Cureent::tid(),但无法显示输出。
-- A: 通过gdb调试，b 38 b 25 r n n， 可知代码逻辑正确。但直接执行testEvent则不显示, 定位是std::cout的原因。经分析，是epoll_wait阻塞，因此在每次std::cout时都强制从缓冲区取出数据。std::cout.flush()。
+> muduo为什么poller需要拥有eventloop? 
+- 为了在poller中检查当前线程是否是创建所属eventloop的线程。目前认为不重要。因为poller只被eventloop拥有，而eventloop的函数基本保证时线程安全的，所以本人在poller中没有增加eventloop成员变量。
 
-## tcp连接遇到的问题
-> Q: 类的成员变量应该使用引用类型、指针类型还是对应类型对象呢？
-- A: https://blog.csdn.net/bumingchun/article/details/112755993?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-112755993-blog-124997514.pc_relevant_multi_platform_featuressortv2removedup&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7ECTRLIST%7Edefault-1-112755993-blog-124997514.pc_relevant_multi_platform_featuressortv2removedup&utm_relevant_index=1
+> 如何保证线程安全？
+- 参考muduo。每个工作线程有一个eventloop对象，不断循环监听事件。新连接到来时，主线程为其创建一个连接对象，将该连接对象会被分派给某个特定进程。此后，连接的所有操作都用该I/O线程管理，包括连接的读写、关闭等。
+通过runInloop和queueInloop函数，可以让其他线程执行连接对象操作时是线程安全的。就是他认为一个对象只能在一个线程中被操作，那么就是线程安全。所以通过runInloop函数，让执行这个对象的I/O操作时，判断是不是在所属的线程，在则直接执行。不在，则将该操作注册到所属线程的队列中，并通知该线程，让他来执行这个操作。
 
-> std::bind 绑定成员函数的用法
+> 多线程访问同一个对象时，对象被析构了，该如何处理？
+智能指针
+
+> std::bind
 - A: https://blog.csdn.net/Jxianxu/article/details/107382049 第一个参数被占位符占用，表示这个参数以调用时传入的参数为准
 - 影响绑定对象的生命周期 https://segmentfault.com/q/1010000018259726
 
 > 为什么tcpconnection需要buffer?
-- A: 因为发送方可能发送不完整数据，那么接收方用户层设置buffer能进行判断
+- 发送缓冲区: 因为发送方可能发送不完数据，内核发送缓冲区就满了。因此把剩下的存在buffer里，注册写事件，可写的时候再写。
+- 接收缓冲区: 因为收到的信息可能不完整，tcp是字节流服务，因此需要存起来等接收到完整数据再通知业务处理。
 
 > 为什么tcpconnection需要使用enable_shared_from_this?
 - 防止访问失效的对象或者发生网络串话
 - 不使用shared_ptr类型指针，用func = std::bind()会保存原始的this，当B调用func，绑定的this对象已经析构，则会core dump。因此，保存shared_ptr让A的生命周期大于等于B。
 
-> make_shared 和 new 的区别？
-
 > 什么时候服务端断开连接？主动断开连接和被动断开连接？
-- 对端正常关闭，发fin, 服务器read返回0
+- 被动断开: 对端正常关闭，发fin, 服务器read返回0
 - 服务端主动关闭连接，需要等到应用层缓冲区数据发送到客户端，才开始关闭
 
 > 被动关闭什么时候调用close
-- 当tcpconnection析构时，socket调用自身析构函数，才会调用close
+- tcpserver将连接从map中移除，调用connectionDestoryed，将channel对应移除。然后tcpconnection开始析构，socket调用自身析构函数，才会调用close(fd)
 
-客户端异常崩溃，服务器此时正在读，正在写，再等待三种情况的反应？
+> 客户端异常崩溃，服务器此时正在读，正在写，再等待三种情况的反应？
 1. 正在读，read 错误为EINTR说明读是由中断引起的，如果是ECONNREST表示网络连接出了问题。
 2. 正在写，会收到客户端发来的RST，write返回EPIPE，错误为EINTR表示在写的时候出现了中断错误 
 3. EWOULDBLOCK写满了 EAGAIN读满了 这两个错误在非阻塞中可以忽略
-
-----------------------
-
 
 > ET和LT触发POLLIN、POLLOUT的情况
 - 参考资料：1.https://blog.csdn.net/daaikuaichuan/article/details/8877727
@@ -106,31 +117,7 @@ Todos:
   由于发送缓冲区不满，有位置可写，而ET无法触发。那么写入数据，不把缓冲区写满，只写一点，此时用户还有剩余要写入缓冲区的数据，但旧数据没有被送走时，即使有空间可写，不会触发POLLOUT来把剩余的数据写入。这样就无法保证用户数据的写入了。
 所以，ET需要循环写、循环读。
 
-Q：为什么ET需要循环读？
-A：ET使用read读取，ssize_t read(int fd, void *buf, size_t count); read一次时，count设置比接收缓冲区的数据大小要小，那么读完整个接收缓冲区需要多次read。
-直到read的返回值比count小，或者read返回-1，errno设置为EAGAIN
-
-https://www.169it.com/tech-qa-linux/article-7879993814782557919.html
-如果用ET模式，要一直read直到返回EAGAIN（by waiting for an event only after read(2) or write(2) return EAGAIN）。
-现在有这样的情况
+> 为什么ET需要循环读？
+- ET使用read读取，ssize_t read(int fd, void *buf, size_t count); read一次时，count设置比接收缓冲区的数据大小要小，那么读完整个接收缓冲区需要多次read。直到read的返回值比count小，或者read返回-1，errno设置为EAGAIN。不过，现在有这样的情况
 reciveSize = read(sockfd, buffer, BUF_LEN);
-reciveSize小于BUF_LEN的时候，我是可以跳出read的循环了还是必须还要继续read直到出现EAGAIN呢？
-理论上返回值小于BUF_LEN不是就已经把缓冲区读完了吗？
-如果必须要read到EAGAIN出现，那么为什么呢？
-是，返回值小于请求值就可以返回了。
-
-Q: 設置tcp socket option
-https://blog.csdn.net/qq_38093301/article/details/105847660
-
-### 日志
-
-
-### 连调出现的bug
-1. 当在浏览器请求http://127.0.0.1:8080/hello等，服务器程序发送完reponse给服务器后，在处理下一个读事件，handleRead时段错误
-答: 首先，找到core dump文件。参考:[https://www.pudn.com/news/6292ee86e74b9677e8e0a8c8.html].注意，在生成core dump文件时，即使设置了ulimit -c unlimited，也先查一下ulimit -c 看是否为 unlimited.
-    调试core dump， 命令为 gdb ../bin/testHttpServer /var/core/core-testHttpServer-11871-18446744073709551615
-    bt查看堆栈信息，不断cotinue
-    定位是TcpConnection::handleRead，Buffer::readFd,append, insert出错。
-    分析，因为insert会扩容，但writeIndex等
-
-2. 什么时候产生POLLHUP
+reciveSize小于BUF_LEN的时候，是可以跳出read的循环，因为在读一次就会出现EAGAIN。所以，返回值小于请求值就可以返回了。

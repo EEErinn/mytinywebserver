@@ -17,7 +17,7 @@ Acceptor::Acceptor(EventLoop* loop, const InetAddress& addr)
     int on = 1;
     ::setsockopt(m_listenSock.getSockFd(), SOL_SOCKET, SO_OOBINLINE, &on,
                  static_cast<socklen_t>(sizeof on));
-    m_listenSock.bind(addr);  // bind
+    m_listenSock.bind(addr);
     m_channel->setReadCallBack_(
         std::bind(&Acceptor::handleRead, this, std::placeholders::_1));
 }
@@ -45,12 +45,6 @@ void Acceptor::handleRead(Timestamp receiveTime) {
     }
     if (connfd < 0) {
         LOG_ERROR << "in Acceptor::handleRead";
-        // if (errno == EMFILE) {
-        //     ::close(idleFd_);
-        //     idleFd_ = ::accept(acceptSocket_.fd(), NULL, NULL);
-        //     ::close(idleFd_);
-        //     idleFd_ = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
-        // }
     }
 }
 
